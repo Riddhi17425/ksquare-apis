@@ -8,6 +8,7 @@ import { DETAIL_IMG_FIELDS, MAX_DETAIL_IMAGES } from "../validators/product.vali
 import { deleteImage, fileOf, imageUrl, UploadSession } from "./image.service.js";
 
 const FOLDER = "products";
+const TRANSPARENT = { transparent: true }; // product photos are shown over a coloured panel, so their solid background is removed
 const notFound = () => ApiError.notFound("Product not found");
 const fieldError = (field, message) => new ApiError(422, message, { code: "VALIDATION_ERROR", errors: [{ field, message }] });
 const assertCategory = async (id) => {
@@ -23,6 +24,21 @@ const NAME_TAKEN = "A product with this name already exists";
 const uploadedDetails = (files) => DETAIL_IMG_FIELDS.map((f) => fileOf(files, f)).filter(Boolean);
 
 export const productService = {
+  /** Public website: one active product by slug, with images, FAQs and its category. */
+  async getPublished(slug) {
+    const row = await productModel.findActiveBySlug(slug);
+    if (!row) throw notFound();
+    const [images, faqs, category] = await Promise.all([productModel.images(row.id), productModel.faqs(row.id), categoryModel.findById(row.category_id)]);
+    const { id, category_id, status, created_at, updated_at, deleted_at, active_slug, ...product } = row; // eslint-disable-line no-unused-vars
+    return {
+      ...product,
+      list_img: imageUrl(row.list_img),
+      detail_imgs: images.map((i) => imageUrl(i.img)),
+      faqs: faqs.map((f) => ({ faq_question: f.faq_question, faq_answer: f.faq_answer })),
+      category: category ? { name: category.name, slug: category.slug } : null,
+    };
+  },
+
   async list(filters) {
     const { rows, total } = await productModel.list(filters);
     return { rows: rows.map((r) => ({ ...r, list_img: imageUrl(r.list_img) })), meta: pageMeta(filters.page, filters.limit, total) };
@@ -49,9 +65,9 @@ export const productService = {
 
     const session = new UploadSession();
     try {
-      const list_img = await session.save(fileOf(files, "list_img"), FOLDER);
+      const list_img = await session.save(fileOf(files, "list_img"), FOLDER, TRANSPARENT);
       const details = [];
-      for (const file of uploadedDetails(files)) details.push(await session.save(file, FOLDER));
+      for (const file of uploadedDetails(files)) details.push(await session.save(file, FOLDER, TRANSPARENT));
 
       const id = await withTransaction(async (conn) => {
         const productId = await productModel.insert(conn, { ...body, list_img });
@@ -86,11 +102,11 @@ export const productService = {
       let list_img = existing.list_img;
       const newList = fileOf(files, "list_img");
       if (newList) {
-        list_img = await session.save(newList, FOLDER);
+        list_img = await session.save(newList, FOLDER, TRANSPARENT);
         toDelete.push(existing.list_img);
       }
       const added = [];
-      for (const file of newFiles) added.push(await session.save(file, FOLDER));
+      for (const file of newFiles) added.push(await session.save(file, FOLDER, TRANSPARENT));
       const removed = current.filter((i) => !keepIds.includes(i.id));
       toDelete.push(...removed.map((i) => i.img));
 
@@ -107,6 +123,10 @@ export const productService = {
       await session.rollback();
       throw err;
     }
+  },
+
+  async updateStatus(id, status) {
+    if (!(await productModel.updateStatus(id, status))) throw notFound();
   },
 
   async remove(id) {

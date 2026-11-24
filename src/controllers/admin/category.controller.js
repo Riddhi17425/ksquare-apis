@@ -14,6 +14,11 @@ export const create = async (req, res) =>
 export const update = async (req, res) =>
   ok(res, await categoryService.update(req.valid.params.id, req.valid.body, req.files), { message: "Category updated" });
 
+export const updateStatus = async (req, res) => {
+  await categoryService.updateStatus(req.valid.params.id, req.valid.body.status);
+  ok(res, { status: req.valid.body.status }, { message: "Status updated" });
+};
+
 export const remove = async (req, res) => {
   await categoryService.remove(req.valid.params.id);
   ok(res, null, { message: "Category deleted" });

@@ -1,4 +1,4 @@
-# ksquare-api
+# ksquare-apis
 
 Express + MySQL backend for the Ksquare website. The Next.js app (`ksquare-next`) never touches the database; the
 public site and the admin panel both talk to this API.

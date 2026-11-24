@@ -13,6 +13,11 @@ export const create = async (req, res) => created(res, await presenceService.cre
 export const update = async (req, res) =>
   ok(res, await presenceService.update(req.valid.params.id, req.valid.body, req.files), { message: "Presence updated" });
 
+export const updateStatus = async (req, res) => {
+  await presenceService.updateStatus(req.valid.params.id, req.valid.body.status);
+  ok(res, { status: req.valid.body.status }, { message: "Status updated" });
+};
+
 export const remove = async (req, res) => {
   await presenceService.remove(req.valid.params.id);
   ok(res, null, { message: "Presence deleted" });

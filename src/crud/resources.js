@@ -31,7 +31,7 @@ export const RESOURCES = [
     fields: [
       text("name", 150),
       text("designation", 150),
-      int("years_of_exp", 0, 80, { label: "Years of experience" }),
+      int("years_of_exp", 0, 80, { label: "Years of experience", optional: true }),
       rich("description", 15000),
       text("meta_title", 255, { optional: true }),
       textarea("meta_description", 500, { optional: true }),

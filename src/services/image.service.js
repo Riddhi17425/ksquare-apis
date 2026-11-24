@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { env } from "../config/env.js";
+import { removeBackground } from "../utils/removeBackground.js";
 import { logger } from "../utils/logger.js";
 
 export const UPLOAD_ROOT = path.resolve(env.UPLOAD_DIR);
@@ -37,11 +38,13 @@ export async function deleteImage(rel) {
 export class UploadSession {
   saved = [];
 
-  async save(file, folder) {
-    const ext = detectImageExt(file.buffer);
+  /** `transparent`: strip the photo's solid background and store it as a PNG (used for product photos). */
+  async save(file, folder, { transparent = false } = {}) {
+    const buffer = transparent ? await removeBackground(file.buffer) : file.buffer;
+    const ext = transparent ? ".png" : detectImageExt(file.buffer);
     const rel = `${folder}/${randomBytes(16).toString("hex")}${ext}`;
     await mkdir(path.join(UPLOAD_ROOT, folder), { recursive: true });
-    await writeFile(path.join(UPLOAD_ROOT, rel), file.buffer, { flag: "wx" });
+    await writeFile(path.join(UPLOAD_ROOT, rel), buffer, { flag: "wx" });
     this.saved.push(rel);
     return rel;
   }

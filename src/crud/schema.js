@@ -24,15 +24,15 @@ function fieldSchema(f) {
         .refine((v) => /^https?:\/\//i.test(v) && URL.canParse(v), `${label} must be a valid http(s) link`);
       return z.preprocess(blankToUndefined, f.optional ? valid.nullish().transform((v) => v ?? null) : valid);
     }
-    case "int":
-      return z.preprocess(
-        blankToUndefined,
-        z.coerce
-          .number(`${label} is required`)
-          .int(`${label} must be a whole number`)
-          .min(f.min, `${label} must be at least ${f.min}`)
-          .max(f.max, `${label} must be at most ${f.max}`),
-      );
+    case "int": {
+      const num = z.coerce
+        .number(`${label} is required`)
+        .int(`${label} must be a whole number`)
+        .min(f.min, `${label} must be at least ${f.min}`)
+        .max(f.max, `${label} must be at most ${f.max}`);
+      // An empty optional number is stored as NULL.
+      return z.preprocess((v) => blankToUndefined(v) ?? (f.optional ? null : undefined), f.optional ? num.nullable() : num);
+    }
     case "date":
       return z.preprocess(
         blankToUndefined,

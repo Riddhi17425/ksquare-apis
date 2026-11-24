@@ -36,7 +36,7 @@ export const blogModel = {
     const [rows] = await pool.execute(
       `SELECT b.id, b.title, b.short_description, b.url, b.status, b.\`date\`, b.front_image, b.created_at, b.updated_at,
               b.author_id, a.name AS author_name
-         FROM blogs b LEFT JOIN admins a ON a.id = b.author_id
+         FROM blogs b LEFT JOIN blog_authors a ON a.id = b.author_id
          ${clause} ORDER BY b.\`date\` DESC, b.id DESC LIMIT ${limit} OFFSET ${(page - 1) * limit}`,
       params,
     );
@@ -48,9 +48,48 @@ export const blogModel = {
       `SELECT b.id, b.author_id, b.title, b.short_description, b.description, b.\`date\`, b.front_image, b.detail_image,
               b.cta_text, b.cta_image, b.conclusion, b.url, b.status, b.meta_title, b.meta_description,
               b.created_at, b.updated_at, b.deleted_at, a.name AS author_name
-         FROM blogs b LEFT JOIN admins a ON a.id = b.author_id
+         FROM blogs b LEFT JOIN blog_authors a ON a.id = b.author_id
         WHERE b.id = ? AND b.deleted_at IS NULL LIMIT 1`,
       [id],
+    );
+    return rows[0] ?? null;
+  },
+
+  /** Active blog authors, offered when choosing a blog's author. */
+  async authors() {
+    const [rows] = await pool.execute("SELECT id, name FROM blog_authors WHERE status = 'active' AND deleted_at IS NULL ORDER BY name, id");
+    return rows;
+  },
+
+  async authorExists(id) {
+    const [rows] = await pool.execute("SELECT 1 FROM blog_authors WHERE id = ? AND status = 'active' AND deleted_at IS NULL LIMIT 1", [id]);
+    return rows.length > 0;
+  },
+
+  /** Public website: published, non-deleted blogs (newest first). */
+  async listPublished({ page, limit }) {
+    const clause = "WHERE b.status = 'published' AND b.deleted_at IS NULL";
+    const [[{ total }]] = await pool.execute(`SELECT COUNT(*) AS total FROM blogs b ${clause}`);
+    const [rows] = await pool.execute(
+      `SELECT b.title, b.short_description, b.url, b.\`date\`, b.front_image,
+              a.name AS author_name, a.thumbnail_img AS author_thumbnail, a.main_img AS author_image
+         FROM blogs b LEFT JOIN blog_authors a ON a.id = b.author_id
+         ${clause} ORDER BY b.\`date\` DESC, b.id DESC LIMIT ${limit} OFFSET ${(page - 1) * limit}`,
+    );
+    return { rows, total };
+  },
+
+  /** Public website: one published blog with its author's details. */
+  async findPublishedByUrl(url) {
+    const [rows] = await pool.execute(
+      `SELECT b.title, b.short_description, b.description, b.\`date\`, b.front_image, b.detail_image, b.cta_text, b.cta_image,
+              b.conclusion, b.url, b.meta_title, b.meta_description,
+              a.name AS author_name, a.designation AS author_designation, a.years_of_exp AS author_years_of_exp,
+              a.description AS author_description, a.main_img AS author_image, a.thumbnail_img AS author_thumbnail,
+              a.social_media_name AS author_social_name, a.social_media_url AS author_social_url
+         FROM blogs b LEFT JOIN blog_authors a ON a.id = b.author_id
+        WHERE b.url = ? AND b.status = 'published' AND b.deleted_at IS NULL LIMIT 1`,
+      [url],
     );
     return rows[0] ?? null;
   },

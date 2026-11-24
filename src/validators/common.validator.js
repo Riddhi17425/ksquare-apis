@@ -16,6 +16,9 @@ export const passwordSchema = z
   .regex(/[A-Z]/, "Password must include an uppercase letter")
   .regex(/\d/, "Password must include a number");
 
+/** Public website: a record addressed by its URL slug. */
+export const slugParams = z.object({ slug: z.string().trim().toLowerCase().min(1).max(191) });
+
 const MAX_ID = 4_294_967_295; // INT UNSIGNED, the type of every id column
 export const idParams = z.object({ id: z.coerce.number().int().positive("Invalid id").max(MAX_ID, "Invalid id") });
 
@@ -136,3 +139,6 @@ export const seoFields = {
   meta_title: optionalText("Meta title", 255),
   meta_description: optionalText("Meta description", 500),
 };
+
+/** Body of PATCH /:id/status for modules with an active / inactive status. */
+export const activeStatusBody = z.object({ status: z.enum(["active", "inactive"], "Status must be active or inactive") });

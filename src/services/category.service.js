@@ -1,5 +1,6 @@
 import { withTransaction } from "../config/db.js";
 import { categoryModel } from "../models/category.model.js";
+import { productModel } from "../models/product.model.js";
 import { resolveSlug } from "../utils/slug.js";
 import { ApiError } from "../utils/ApiError.js";
 import { pageMeta } from "../utils/pagination.js";
@@ -22,6 +23,24 @@ const presentImages = (row) => {
 };
 
 export const categoryService = {
+  /** Public website: active categories. */
+  async listPublished() {
+    return (await categoryModel.listActive()).map(presentImages);
+  },
+
+  /** Public website: one active category by slug, with its configuration entries and active products. */
+  async getPublished(slug) {
+    const row = await categoryModel.findActiveBySlug(slug);
+    if (!row) throw notFound();
+    const [configuration, products] = await Promise.all([categoryModel.configurations(row.id), productModel.listActiveByCategory(row.id)]);
+    const { id, status, created_at, updated_at, deleted_at, active_slug, ...category } = presentImages(row); // eslint-disable-line no-unused-vars
+    return {
+      ...category,
+      configuration: configuration.map((c) => ({ title: c.title, description: c.description, icon: imageUrl(c.icon) })),
+      products: products.map(({ id: _id, ...p }) => ({ ...p, list_img: imageUrl(p.list_img) })),
+    };
+  },
+
   async list(filters) {
     const { rows, total } = await categoryModel.list(filters);
     return { rows: rows.map(presentImages), meta: pageMeta(filters.page, filters.limit, total) };
@@ -121,6 +140,10 @@ export const categoryService = {
       await session.rollback();
       throw err;
     }
+  },
+
+  async updateStatus(id, status) {
+    if (!(await categoryModel.updateStatus(id, status))) throw notFound();
   },
 
   async remove(id) {

@@ -4,7 +4,7 @@ import { optionalRichText, optionalText, requiredRichText, requiredText, seoFiel
 export const MAX_CONFIG_ENTRIES = 10;
 export const CONFIG_ICON_FIELDS = Array.from({ length: MAX_CONFIG_ENTRIES }, (_, i) => `config_icon_${i}`);
 export const CATEGORY_IMAGES = ["list_image", "detail_image_d", "detail_image_m"];
-export const CATEGORY_OPTIONAL_IMAGES = ["why_choose_img", "menu_img"];
+export const CATEGORY_OPTIONAL_IMAGES = ["why_choose_img", "menu_img", "menu_icon"];
 export const CATEGORY_ALL_IMAGES = [...CATEGORY_IMAGES, ...CATEGORY_OPTIONAL_IMAGES];
 const ALL_IMAGES = [...CATEGORY_ALL_IMAGES, ...CONFIG_ICON_FIELDS];
 
@@ -36,7 +36,7 @@ export const categoryBody = z
   .object({
     name: requiredText("Name", 150),
     ...seoFields,
-    short_description: requiredText("Short description", 500),
+    short_description: requiredRichText("Short description", 20_000),
     title: requiredText("Title", 255),
     product_summary: optionalText("Product summary", 5000),
     why_choose_summary: optionalText("Why choose summary", 5000),

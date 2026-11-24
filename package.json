@@ -1,5 +1,5 @@
 {
-  "name": "ksquare-api",
+  "name": "ksquare-apis",
   "version": "1.0.0",
   "description": "Backend API (frontend + admin) for the Ksquare website",
   "main": "src/server.js",
@@ -7,7 +7,9 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "migrate": "node src/db/migrate.js",
-    "seed": "node src/db/seed.js"
+    "seed": "node src/db/seed.js",
+    "import:blogs": "node src/db/import-blogs.js",
+    "products:transparent": "node src/db/remove-product-backgrounds.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -21,6 +23,7 @@
     "mysql2": "^3.24.6",
     "nodemailer": "^10.6.0",
     "sanitize-html": "^2.18.2",
+    "sharp": "^0.35.5",
     "zod": "^4.6.7"
   },
   "private": true,

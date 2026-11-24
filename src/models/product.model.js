@@ -31,6 +31,20 @@ export const productModel = {
     return { rows, total };
   },
 
+  /** Public website: active products of a category. */
+  async listActiveByCategory(categoryId) {
+    const [rows] = await pool.execute(
+      "SELECT id, name, slug, title, short_description, list_img FROM products WHERE category_id = ? AND status = 'active' AND deleted_at IS NULL ORDER BY id",
+      [categoryId],
+    );
+    return rows;
+  },
+
+  async findActiveBySlug(slug) {
+    const [rows] = await pool.execute("SELECT * FROM products WHERE slug = ? AND status = 'active' AND deleted_at IS NULL LIMIT 1", [slug]);
+    return rows[0] ?? null;
+  },
+
   async findById(id) {
     const [rows] = await pool.execute("SELECT * FROM products WHERE id = ? AND deleted_at IS NULL LIMIT 1", [id]);
     return rows[0] ?? null;
@@ -94,6 +108,11 @@ export const productModel = {
         faqs[i].faq_answer,
         i,
       ]);
+  },
+
+  async updateStatus(id, status) {
+    const [r] = await pool.execute("UPDATE products SET status = ? WHERE id = ? AND deleted_at IS NULL", [status, id]);
+    return r.affectedRows > 0;
   },
 
   async remove(id) {

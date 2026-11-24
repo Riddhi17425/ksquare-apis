@@ -69,6 +69,11 @@ export const presenceModel = {
       ]);
   },
 
+  async updateStatus(id, status) {
+    const [r] = await pool.execute("UPDATE ksquare_presences SET status = ? WHERE id = ? AND deleted_at IS NULL", [status, id]);
+    return r.affectedRows > 0;
+  },
+
   async remove(id) {
     const [r] = await pool.execute("UPDATE ksquare_presences SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL", [id]);
     return r.affectedRows > 0;

@@ -13,6 +13,11 @@ export const create = async (req, res) => created(res, await productService.crea
 export const update = async (req, res) =>
   ok(res, await productService.update(req.valid.params.id, req.valid.body, req.files), { message: "Product updated" });
 
+export const updateStatus = async (req, res) => {
+  await productService.updateStatus(req.valid.params.id, req.valid.body.status);
+  ok(res, { status: req.valid.body.status }, { message: "Status updated" });
+};
+
 export const remove = async (req, res) => {
   await productService.remove(req.valid.params.id);
   ok(res, null, { message: "Product deleted" });

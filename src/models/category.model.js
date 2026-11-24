@@ -19,6 +19,7 @@ const COLUMNS = [
   "configuration_short_line",
   "why_choose_img",
   "menu_img",
+  "menu_icon",
   "type",
   "status",
 ];
@@ -36,6 +37,19 @@ export const categoryModel = {
       params,
     );
     return { rows, total };
+  },
+
+  /** Public website: active, non-deleted categories (for menus and the category list). */
+  async listActive() {
+    const [rows] = await pool.execute(
+      "SELECT id, name, slug, title, type, short_description, list_image, menu_img, menu_icon FROM categories WHERE status = 'active' AND deleted_at IS NULL ORDER BY id",
+    );
+    return rows;
+  },
+
+  async findActiveBySlug(slug) {
+    const [rows] = await pool.execute("SELECT * FROM categories WHERE slug = ? AND status = 'active' AND deleted_at IS NULL LIMIT 1", [slug]);
+    return rows[0] ?? null;
   },
 
   async findById(id, conn = pool) {
@@ -96,6 +110,11 @@ export const categoryModel = {
   async deleteConfigurations(conn, ids) {
     if (!ids.length) return;
     await conn.execute(`DELETE FROM category_configurations WHERE id IN (${ids.map(() => "?").join(",")})`, ids);
+  },
+
+  async updateStatus(id, status) {
+    const [r] = await pool.execute("UPDATE categories SET status = ? WHERE id = ? AND deleted_at IS NULL", [status, id]);
+    return r.affectedRows > 0;
   },
 
   async remove(id) {

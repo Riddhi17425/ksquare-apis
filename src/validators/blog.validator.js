@@ -14,7 +14,7 @@ export const blogBody = z.object({
   description: requiredRichText("Description", 500_000),
   date: z.iso.date("Enter a valid date").refine((d) => d >= "1990-01-01" && d <= "2100-12-31", "Date is out of range"),
   cta_text: requiredText("CTA text", 255),
-  conclusion: requiredText("Conclusion", 20_000),
+  conclusion: requiredRichText("Conclusion", 100_000),
   url: z
     .string("URL is required")
     .trim()
@@ -35,3 +35,6 @@ export const checkUrlQuery = z.object({
   url: z.string().trim().toLowerCase().max(191),
   exclude: z.coerce.number().int().positive().optional(), // blog being edited
 });
+
+/** Public website: GET /frontend/blogs/:url */
+export const publicBlogParams = z.object({ url: z.string().trim().toLowerCase().min(1).max(191) });

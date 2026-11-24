@@ -61,6 +61,10 @@ export const presenceService = {
     }
   },
 
+  async updateStatus(id, status) {
+    if (!(await presenceModel.updateStatus(id, status))) throw notFound();
+  },
+
   async remove(id) {
     if (!(await presenceModel.remove(id))) throw notFound();
   },

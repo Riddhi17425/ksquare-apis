@@ -1,4 +1,4 @@
-import { adminModel } from "../models/admin.model.js";
+
 import { blogModel } from "../models/blog.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { pageMeta } from "../utils/pagination.js";
@@ -17,7 +17,7 @@ const present = (row) => {
 
 async function assertValid(body, excludeId) {
   if (await blogModel.urlExists(body.url, excludeId)) throw fieldError("url", "This URL is already in use by another blog");
-  if (!(await adminModel.findActiveById(body.author_id))) throw fieldError("author_id", "Selected author does not exist");
+  if (!(await blogModel.authorExists(body.author_id))) throw fieldError("author_id", "Selected author does not exist");
 }
 
 export const blogService = {
@@ -30,6 +30,20 @@ export const blogService = {
     const row = await blogModel.findById(id);
     if (!row) throw notFound();
     return present(row);
+  },
+
+  /** Public website: published blogs for the blog page. */
+  async listPublished(filters) {
+    const { rows, total } = await blogModel.listPublished(filters);
+    const items = rows.map((r) => ({ ...present(r), author_thumbnail: imageUrl(r.author_thumbnail), author_image: imageUrl(r.author_image) }));
+    return { rows: items, meta: pageMeta(filters.page, filters.limit, total) };
+  },
+
+  /** Public website: one published blog by its URL slug. */
+  async getPublished(url) {
+    const row = await blogModel.findPublishedByUrl(url);
+    if (!row) throw notFound();
+    return { ...present(row), author_image: imageUrl(row.author_image), author_thumbnail: imageUrl(row.author_thumbnail) };
   },
 
   async isUrlAvailable(url, excludeId) {

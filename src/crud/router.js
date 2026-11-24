@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { authorize } from "../middleware/authorize.js";
-import { uploadImages } from "../middleware/upload.js";
+import { uploadDocuments, uploadImages } from "../middleware/upload.js";
 import { validate } from "../middleware/validate.js";
 import { idParams } from "../validators/common.validator.js";
 import { created, ok } from "../utils/response.js";
-import { fieldLabel, imageFields } from "./resources.js";
+import { documentFields, fieldLabel, imageFields } from "./resources.js";
 import { bodySchema, querySchema, statusBody } from "./schema.js";
 import { createService } from "./service.js";
 
@@ -15,7 +15,11 @@ export function createCrudRouter(res) {
   const names = imageFields(res).map((f) => f.name);
   const labels = Object.fromEntries(imageFields(res).map((f) => [f.name, fieldLabel(f)]));
   const images = { required: imageFields(res).filter((f) => !f.optional).map((f) => f.name), all: names, labels };
-  const upload = names.length ? [uploadImages(names)] : []; // resources without images are sent as JSON
+  const docNames = documentFields(res).map((f) => f.name);
+  const docLabels = Object.fromEntries(documentFields(res).map((f) => [f.name, fieldLabel(f)]));
+  const documents = { required: documentFields(res).filter((f) => !f.optional).map((f) => f.name), all: docNames, labels: docLabels };
+  // Resources with PDF fields use the document uploader; resources without any file are sent as JSON.
+  const upload = docNames.length ? [uploadDocuments([...names, ...docNames])] : names.length ? [uploadImages(names)] : [];
 
   const router = Router();
 
@@ -26,13 +30,13 @@ export function createCrudRouter(res) {
 
   router.get("/options", async (_req, response) => ok(response, await service.options())); // before /:id
 
-  router.post("/", ...upload, validate({ body, images }), async (req, response) =>
+  router.post("/", ...upload, validate({ body, images, documents }), async (req, response) =>
     created(response, await service.create(req.valid.body, req.files), `${res.label} created`),
   );
 
   router.get("/:id", validate({ params: idParams }), async (req, response) => ok(response, await service.get(req.valid.params.id)));
 
-  router.put("/:id", ...upload, validate({ params: idParams, body, images: { all: names, labels } }), async (req, response) =>
+  router.put("/:id", ...upload, validate({ params: idParams, body, images: { all: names, labels }, documents: { all: docNames, labels: docLabels } }), async (req, response) =>
     ok(response, await service.update(req.valid.params.id, req.valid.body, req.files), { message: `${res.label} updated` }),
   );
 

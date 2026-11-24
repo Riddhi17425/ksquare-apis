@@ -22,7 +22,7 @@ export function errorHandler(err, req, res, _next) {
     code = "UPLOAD_ERROR";
     message =
       err.code === "LIMIT_FILE_SIZE"
-        ? "Each image must be 2 MB or smaller"
+        ? "The file is too large (images up to 2 MB, PDFs up to 15 MB)"
         : err.code === "LIMIT_UNEXPECTED_FILE"
           ? "Unexpected file field"
           : "Invalid upload";

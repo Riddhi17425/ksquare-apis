@@ -4,7 +4,7 @@
  *   POST /   GET /:id   PUT /:id   PATCH /:id/status   DELETE /:id  (super_admin only, soft delete)
  * `status` and `deleted_at` exist on every table and are handled for all of them, so they are not listed as fields.
  *
- * Field types: text, textarea, int, date, bool (0/1), url, image (uploaded file), fk (id of another table's row).
+ * Field types: text, textarea, int, date, bool (0/1), url, image (uploaded image), file (uploaded PDF), fk (id of another table's row).
  * Fields are required unless `optional: true`.
  */
 
@@ -17,6 +17,7 @@ const date = (name, o = {}) => ({ name, type: "date", ...o });
 const bool = (name, o = {}) => ({ name, type: "bool", ...o });
 const url = (name, o = {}) => ({ name, type: "url", max: 255, ...o });
 const image = (name, o = {}) => ({ name, type: "image", ...o });
+const file = (name, o = {}) => ({ name, type: "file", ...o });
 const fk = (name, ref, o = {}) => ({ name, type: "fk", ref, ...o });
 
 export const RESOURCES = [
@@ -69,7 +70,7 @@ export const RESOURCES = [
     fields: [
       fk("certificate_category_id", "certificate_category", { label: "Certificate category" }),
       text("name", 255),
-      image("img", { label: "Image" }),
+      file("pdf_file", { label: "PDF file" }),
     ],
   },
   {
@@ -160,6 +161,7 @@ export const RESOURCES = [
 
 export const byTable = Object.fromEntries(RESOURCES.map((r) => [r.table, r]));
 export const imageFields = (res) => res.fields.filter((f) => f.type === "image");
+export const documentFields = (res) => res.fields.filter((f) => f.type === "file");
 export const fieldLabel = (f) => f.label ?? f.name.replace(/_id$/, "").replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
 /** Alias of the joined label column for an fk field: certificate_category_id -> certificate_category_name */
 export const fkAlias = (f) => `${f.name.replace(/_id$/, "")}_name`;

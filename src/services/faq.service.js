@@ -20,6 +20,13 @@ async function assertCategoryUsable(categoryId, currentCategoryId) {
 const DUPLICATE_QUESTION = "This question already exists in the selected category";
 
 export const faqService = {
+  /** Public website: the categories that have FAQs, and all their FAQs. */
+  async listPublished() {
+    const faqs = await faqModel.listPublished();
+    const categories = [...new Map(faqs.map((f) => [f.category_id, f.category])).values()];
+    return { categories, faqs: faqs.map(({ category, question, answer }) => ({ category, question, answer })) };
+  },
+
   async list(filters) {
     const { rows, total } = await faqModel.list(filters);
     return { rows, meta: pageMeta(filters.page, filters.limit, total) };

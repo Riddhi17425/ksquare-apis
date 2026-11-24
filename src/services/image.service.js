@@ -7,6 +7,7 @@ import { logger } from "../utils/logger.js";
 
 export const UPLOAD_ROOT = path.resolve(env.UPLOAD_DIR);
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+export const MAX_DOCUMENT_BYTES = 15 * 1024 * 1024;
 
 /** Detects the real image type from the file's magic bytes (the client-sent mimetype/extension is never trusted). */
 export function detectImageExt(buf) {
@@ -16,6 +17,9 @@ export function detectImageExt(buf) {
   if (buf.subarray(0, 4).toString("ascii") === "RIFF" && buf.subarray(8, 12).toString("ascii") === "WEBP") return ".webp";
   return null;
 }
+
+/** A real PDF starts with "%PDF-" (the client-sent mimetype/extension is never trusted). */
+export const isPdf = (buf) => buf.length > 5 && buf.subarray(0, 5).toString("ascii") === "%PDF-";
 
 /** DB stores a relative path ("blogs/ab12.png"); API responses expose the absolute URL. */
 export const imageUrl = (rel) => (rel ? `${env.API_PUBLIC_URL}/uploads/${rel}` : null);
@@ -45,6 +49,15 @@ export class UploadSession {
     const rel = `${folder}/${randomBytes(16).toString("hex")}${ext}`;
     await mkdir(path.join(UPLOAD_ROOT, folder), { recursive: true });
     await writeFile(path.join(UPLOAD_ROOT, rel), buffer, { flag: "wx" });
+    this.saved.push(rel);
+    return rel;
+  }
+
+  /** Saves an uploaded PDF (already validated) and returns its relative path. */
+  async saveDocument(file, folder) {
+    const rel = `${folder}/${randomBytes(16).toString("hex")}.pdf`;
+    await mkdir(path.join(UPLOAD_ROOT, folder), { recursive: true });
+    await writeFile(path.join(UPLOAD_ROOT, rel), file.buffer, { flag: "wx" });
     this.saved.push(rel);
     return rel;
   }

@@ -56,7 +56,7 @@ function fieldSchema(f) {
 /** Request body schema of a resource (image fields travel as uploaded files, not in the body). */
 export function bodySchema(res) {
   const shape = { status: z.enum(STATUSES, "Status must be active or inactive").default("active") };
-  for (const f of res.fields) if (f.type !== "image") shape[f.name] = fieldSchema(f);
+  for (const f of res.fields) if (f.type !== "image" && f.type !== "file") shape[f.name] = fieldSchema(f);
   const schema = z.object(shape);
   return res.refine ? schema.superRefine(res.refine) : schema;
 }

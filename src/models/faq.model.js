@@ -26,6 +26,16 @@ export const faqModel = {
     return { rows, total };
   },
 
+  /** Public website: FAQs of active, non-deleted categories, in category order then their own order. */
+  async listPublished() {
+    const [rows] = await pool.execute(
+      `SELECT c.id AS category_id, c.name AS category, f.question, f.answer
+         FROM faqs f JOIN faq_categories c ON c.id = f.category_id AND c.deleted_at IS NULL AND c.status = 'active'
+        ORDER BY c.id, f.sort_order, f.id`,
+    );
+    return rows;
+  },
+
   async listByCategory(categoryId) {
     const [rows] = await pool.execute("SELECT id, question, answer, sort_order FROM faqs WHERE category_id = ? ORDER BY sort_order, id", [categoryId]);
     return rows;

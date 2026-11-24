@@ -2,16 +2,19 @@ import { ApiError } from "../utils/ApiError.js";
 import { pageMeta } from "../utils/pagination.js";
 import { deleteImage, fileOf, imageUrl, UploadSession } from "../services/image.service.js";
 import { createModel } from "./model.js";
-import { fieldLabel, imageFields } from "./resources.js";
+import { documentFields, fieldLabel, imageFields } from "./resources.js";
 
 const invalid = (field, message) => new ApiError(422, message, { code: "VALIDATION_ERROR", errors: [{ field, message }] });
 
 export function createService(res) {
   const model = createModel(res);
-  const images = imageFields(res);
+  const images = [...imageFields(res), ...documentFields(res)]; // every uploaded file (images and PDFs)
   const notFound = () => ApiError.notFound(`${res.label} not found`);
 
-  // The database keeps relative image paths; responses expose absolute URLs.
+  // Images are saved as images, PDFs as documents.
+  const saveFile = (session, f, file) => (f.type === "file" ? session.saveDocument(file, res.slug) : session.save(file, res.slug));
+
+  // The database keeps relative file paths; responses expose absolute URLs.
   const present = (row) => {
     const out = { ...row };
     for (const f of images) out[f.name] = imageUrl(out[f.name]);
@@ -51,7 +54,7 @@ export function createService(res) {
         const paths = {};
         for (const f of images) {
           const file = fileOf(files, f.name);
-          paths[f.name] = file ? await session.save(file, res.slug) : null;
+          paths[f.name] = file ? await saveFile(session, f, file) : null;
         }
         const id = await model.insert({ ...body, ...paths });
         return this.get(id);
@@ -72,7 +75,7 @@ export function createService(res) {
         for (const f of images) {
           const file = fileOf(files, f.name);
           if (file) {
-            paths[f.name] = await session.save(file, res.slug);
+            paths[f.name] = await saveFile(session, f, file);
             replaced.push(existing[f.name]);
           } else paths[f.name] = existing[f.name];
         }

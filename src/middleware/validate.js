@@ -1,4 +1,4 @@
-import { detectImageExt } from "../services/image.service.js";
+import { detectImageExt, isPdf } from "../services/image.service.js";
 import { ApiError } from "../utils/ApiError.js";
 
 const humanize = (name, labels) => labels?.[name] ?? name.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
@@ -28,6 +28,17 @@ export const validate = (schemas) => (req, _res, next) => {
       const file = files[name]?.[0];
       if (file && !detectImageExt(file.buffer))
         errors.push({ field: name, message: `${humanize(name, schemas.images.labels)} must be a JPG, PNG or WebP image` });
+    }
+  }
+
+  // PDF documents: { required: ["pdf_file"], all: ["pdf_file"], labels: { pdf_file: "PDF file" } }
+  if (schemas.documents) {
+    const files = req.files ?? {};
+    for (const name of schemas.documents.required ?? [])
+      if (!files[name]?.[0]) errors.push({ field: name, message: `${humanize(name, schemas.documents.labels)} is required` });
+    for (const name of schemas.documents.all ?? []) {
+      const file = files[name]?.[0];
+      if (file && !isPdf(file.buffer)) errors.push({ field: name, message: `${humanize(name, schemas.documents.labels)} must be a PDF file` });
     }
   }
 

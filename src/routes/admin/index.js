@@ -9,6 +9,7 @@ import categoryRoutes from "./category.routes.js";
 import enquiryRoutes from "./enquiry.routes.js";
 import faqCategoryRoutes from "./faqCategory.routes.js";
 import faqRoutes from "./faq.routes.js";
+import pageContentRoutes from "./pageContent.routes.js";
 import profileRoutes from "./profile.routes.js";
 import presenceRoutes from "./presence.routes.js";
 import productRoutes from "./product.routes.js";
@@ -23,6 +24,7 @@ router.use("/auth", authRoutes); // login / forgot / reset are public; the rest 
 router.use(authenticate);
 router.get("/authors", authors.list);
 router.use("/profile", profileRoutes);
+router.use("/page-content", pageContentRoutes);
 router.use("/enquiries", enquiryRoutes);
 router.use("/testimonials", testimonialRoutes);
 router.use("/blogs", blogRoutes);

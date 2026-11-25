@@ -6,6 +6,8 @@
  *
  * Field types: text, textarea, int, date, bool (0/1), url, image (uploaded image), file (uploaded PDF), fk (id of another table's row).
  * Fields are required unless `optional: true`.
+ * `repeaters: [{ name, label, table, column, max, fields }]` adds repeating rows ("Add more") kept in a child table; the rows are
+ * sent as a JSON field named after the repeater, and each image of a row as the file `<name>_<field>_<row number>`.
  */
 
 const text = (name, max, o = {}) => ({ name, type: "text", max, ...o });
@@ -149,17 +151,43 @@ export const RESOURCES = [
     slug: "projects",
     table: "projects",
     label: "Project",
-    search: ["title"],
+    search: [],
     orderBy: "t.id DESC",
-    fields: [
-      fk("project_categories_id", "project_categories", { label: "Project category" }),
-      image("img", { label: "Image" }),
-      text("title", 255),
+    fields: [fk("project_categories_id", "project_categories", { label: "Project category" })],
+    repeaters: [
+      {
+        name: "gallery",
+        label: "Project pictures",
+        table: "project_images",
+        column: "project_id",
+        max: 20,
+        fields: [image("img", { label: "Image" }), text("name", 150)],
+      },
+      {
+        name: "items",
+        label: "Projects",
+        table: "project_items",
+        column: "project_id",
+        max: 20,
+        fields: [
+          image("project_img", { label: "Project image" }),
+          text("tag", 100, { optional: true }),
+          text("title", 255),
+          text("location", 255, { optional: true }),
+          textarea("short_note", 500, { label: "Short note", optional: true }),
+          text("power_capacity", 100, { label: "Power capacity", optional: true }),
+        ],
+      },
     ],
   },
 ];
 
 export const byTable = Object.fromEntries(RESOURCES.map((r) => [r.table, r]));
+/** The image fields of a repeater and the names of their upload fields: `<repeater>_<field>_<row number>` */
+export const repeaterImageFields = (r) => r.fields.filter((f) => f.type === "image");
+export const repeaterFileName = (r, f, i) => `${r.name}_${f.name}_${i}`;
+export const repeaterFileNames = (res) =>
+  (res.repeaters ?? []).flatMap((r) => repeaterImageFields(r).flatMap((f) => Array.from({ length: r.max }, (_, i) => repeaterFileName(r, f, i))));
 export const imageFields = (res) => res.fields.filter((f) => f.type === "image");
 export const documentFields = (res) => res.fields.filter((f) => f.type === "file");
 export const fieldLabel = (f) => f.label ?? f.name.replace(/_id$/, "").replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());

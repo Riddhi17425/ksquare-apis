@@ -1,10 +1,11 @@
 import { Router } from "express";
+import { z } from "zod";
 import { authorize } from "../middleware/authorize.js";
 import { uploadDocuments, uploadImages } from "../middleware/upload.js";
 import { validate } from "../middleware/validate.js";
 import { idParams } from "../validators/common.validator.js";
 import { created, ok } from "../utils/response.js";
-import { documentFields, fieldLabel, imageFields } from "./resources.js";
+import { documentFields, fieldLabel, imageFields, repeaterFileName, repeaterFileNames, repeaterImageFields } from "./resources.js";
 import { bodySchema, querySchema, statusBody } from "./schema.js";
 import { createService } from "./service.js";
 
@@ -12,9 +13,12 @@ import { createService } from "./service.js";
 export function createCrudRouter(res) {
   const service = createService(res);
   const body = bodySchema(res);
-  const names = imageFields(res).map((f) => f.name);
+  const names = [...imageFields(res).map((f) => f.name), ...repeaterFileNames(res)];
   const labels = Object.fromEntries(imageFields(res).map((f) => [f.name, fieldLabel(f)]));
-  const images = { required: imageFields(res).filter((f) => !f.optional).map((f) => f.name), all: names, labels };
+  const repeaterLabels = Object.fromEntries(
+    (res.repeaters ?? []).flatMap((r) => repeaterImageFields(r).flatMap((f) => Array.from({ length: r.max }, (_, i) => [repeaterFileName(r, f, i), fieldLabel(f)]))),
+  );
+  const images = { required: imageFields(res).filter((f) => !f.optional).map((f) => f.name), all: names, labels: { ...labels, ...repeaterLabels } };
   const docNames = documentFields(res).map((f) => f.name);
   const docLabels = Object.fromEntries(documentFields(res).map((f) => [f.name, fieldLabel(f)]));
   const documents = { required: documentFields(res).filter((f) => !f.optional).map((f) => f.name), all: docNames, labels: docLabels };
@@ -43,6 +47,13 @@ export function createCrudRouter(res) {
   router.patch("/:id/status", validate({ params: idParams, body: statusBody }), async (req, response) =>
     ok(response, await service.updateStatus(req.valid.params.id, req.valid.body.status), { message: "Status updated" }),
   );
+
+  // Quick on/off toggle of a yes/no field (e.g. "Featured") straight from the list.
+  const flagNames = res.fields.filter((f) => f.type === "bool").map((f) => f.name);
+  if (flagNames.length)
+    router.patch("/:id/flag", validate({ params: idParams, body: z.object({ field: z.enum(flagNames), value: z.boolean() }) }), async (req, response) =>
+      ok(response, await service.updateFlag(req.valid.params.id, req.valid.body.field, req.valid.body.value), { message: "Updated" }),
+    );
 
   router.delete("/:id", authorize("super_admin"), validate({ params: idParams }), async (req, response) => {
     await service.remove(req.valid.params.id);

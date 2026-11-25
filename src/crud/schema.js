@@ -53,10 +53,32 @@ function fieldSchema(f) {
   }
 }
 
+/** Repeater rows arrive as a JSON string inside the multipart form: [{ id?, ...fields }, ...] (pictures travel as files). */
+const repeaterRows = (r) =>
+  z
+    .string()
+    .optional()
+    .default("[]")
+    .transform((raw, ctx) => {
+      try {
+        return JSON.parse(raw);
+      } catch {
+        ctx.addIssue({ code: "custom", message: `${r.label} is not valid` });
+        return z.NEVER;
+      }
+    })
+    .pipe(
+      z
+        .array(z.object({ id: z.coerce.number().int().positive().optional(), ...Object.fromEntries(r.fields.filter((f) => f.type !== "image").map((f) => [f.name, fieldSchema(f)])) }))
+        .max(r.max, `At most ${r.max} rows`)
+        .refine((rows) => new Set(rows.filter((x) => x.id).map((x) => x.id)).size === rows.filter((x) => x.id).length, "A row is repeated"),
+    );
+
 /** Request body schema of a resource (image fields travel as uploaded files, not in the body). */
 export function bodySchema(res) {
   const shape = { status: z.enum(STATUSES, "Status must be active or inactive").default("active") };
   for (const f of res.fields) if (f.type !== "image" && f.type !== "file") shape[f.name] = fieldSchema(f);
+  for (const r of res.repeaters ?? []) shape[r.name] = repeaterRows(r);
   const schema = z.object(shape);
   return res.refine ? schema.superRefine(res.refine) : schema;
 }

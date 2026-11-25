@@ -10,6 +10,9 @@ export function createModel(res) {
   const fks = res.fields.filter((f) => f.type === "fk");
   const columns = ["status", ...res.fields.map((f) => f.name)];
 
+  // Counts of the rows of each repeater, shown in the list.
+  const counts = (res.repeaters ?? []).map((r) => `(SELECT COUNT(*) FROM ${col(r.table)} c WHERE c.${col(r.column)} = t.id) AS ${col(r.name + "_count")}`);
+
   // Dates come back as plain "YYYY-MM-DD" strings (no timezone shifts); fks also return the referenced row's label.
   const select = [
     "t.id",
@@ -18,6 +21,7 @@ export function createModel(res) {
     "t.updated_at",
     ...res.fields.map((f) => (f.type === "date" ? `DATE_FORMAT(t.${col(f.name)}, '%Y-%m-%d') AS ${col(f.name)}` : `t.${col(f.name)}`)),
     ...fks.map((f, i) => `j${i}.${col(byTable[f.ref].labelField)} AS ${col(fkAlias(f))}`),
+    ...counts,
   ].join(", ");
   const from = `${col(res.table)} t ${fks.map((f, i) => `LEFT JOIN ${col(f.ref)} j${i} ON j${i}.id = t.${col(f.name)}`).join(" ")}`;
 
@@ -81,23 +85,54 @@ export function createModel(res) {
       return n;
     },
 
-    async insert(data) {
-      const [r] = await pool.execute(
+    async insert(data, conn = pool) {
+      const [r] = await conn.execute(
         `INSERT INTO ${col(res.table)} (${columns.map(col).join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`,
         columns.map((c) => data[c] ?? null),
       );
       return r.insertId;
     },
 
-    async update(id, data) {
-      await pool.execute(
+    async update(id, data, conn = pool) {
+      await conn.execute(
         `UPDATE ${col(res.table)} SET ${columns.map((c) => `${col(c)} = ?`).join(", ")} WHERE id = ? AND deleted_at IS NULL`,
         [...columns.map((c) => data[c] ?? null), id],
       );
     },
 
+    // ---- repeater rows (resources with `repeaters`): [{ id, <fields>, sort_order }]
+    async children(r, parentId) {
+      const names = r.fields.map((f) => col(f.name)).join(", ");
+      const [rows] = await pool.execute(`SELECT id, ${names}, sort_order FROM ${col(r.table)} WHERE ${col(r.column)} = ? ORDER BY sort_order, id`, [parentId]);
+      return rows;
+    },
+
+    async insertChild(conn, r, parentId, row) {
+      const names = r.fields.map((f) => f.name);
+      await conn.execute(
+        `INSERT INTO ${col(r.table)} (${col(r.column)}, ${names.map(col).join(", ")}, sort_order) VALUES (${["?", ...names.map(() => "?"), "?"].join(", ")})`,
+        [parentId, ...names.map((n) => row[n] ?? null), row.sort_order],
+      );
+    },
+
+    async updateChild(conn, r, id, row) {
+      const names = r.fields.map((f) => f.name);
+      await conn.execute(`UPDATE ${col(r.table)} SET ${[...names, "sort_order"].map((n) => `${col(n)} = ?`).join(", ")} WHERE id = ?`, [...names.map((n) => row[n] ?? null), row.sort_order, id]);
+    },
+
+    async deleteChildren(conn, r, ids) {
+      if (!ids.length) return;
+      await conn.execute(`DELETE FROM ${col(r.table)} WHERE id IN (${ids.map(() => "?").join(",")})`, ids);
+    },
+
     async updateStatus(id, status) {
       const [r] = await pool.execute(`UPDATE ${col(res.table)} SET status = ? WHERE id = ? AND deleted_at IS NULL`, [status, id]);
+      return r.affectedRows > 0;
+    },
+
+    /** `field` is validated against the resource's bool fields by the router before it reaches here. */
+    async updateFlag(id, field, value) {
+      const [r] = await pool.execute(`UPDATE ${col(res.table)} SET ${col(field)} = ? WHERE id = ? AND deleted_at IS NULL`, [value ? 1 : 0, id]);
       return r.affectedRows > 0;
     },
 

@@ -79,3 +79,17 @@ export const presenceModel = {
     return r.affectedRows > 0;
   },
 };
+
+/** Public website: active, non-deleted states (in the order they were added) with their cities. */
+export async function listPublishedPresences() {
+  const [states] = await pool.execute(
+    "SELECT id, state_name, state_link, short_line, map_img FROM ksquare_presences WHERE status = 'active' AND deleted_at IS NULL ORDER BY id ASC",
+  );
+  if (!states.length) return [];
+  const [cities] = await pool.execute(
+    `SELECT presence_id, city_name, city_link FROM ksquare_presence_cities
+      WHERE presence_id IN (SELECT id FROM ksquare_presences WHERE status = 'active' AND deleted_at IS NULL)
+      ORDER BY sort_order, id`,
+  );
+  return states.map((s) => ({ ...s, cities: cities.filter((c) => c.presence_id === s.id) }));
+}

@@ -15,6 +15,12 @@ export const testimonialModel = {
     return { rows, total };
   },
 
+  /** Public website: every testimonial, oldest first (the order they were added). */
+  async listAll() {
+    const [rows] = await pool.execute("SELECT id, profile_photo, name, company, description FROM testimonials ORDER BY id ASC");
+    return rows;
+  },
+
   async findById(id) {
     const [rows] = await pool.execute("SELECT * FROM testimonials WHERE id = ? LIMIT 1", [id]);
     return rows[0] ?? null;

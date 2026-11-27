@@ -33,6 +33,7 @@ export const settingsBody = z
     facebook_link: socialUrl("Facebook link", ["facebook.com", "fb.com", "fb.me"]),
     instagram_link: socialUrl("Instagram link", ["instagram.com", "instagr.am"]),
     linkedin_link: socialUrl("LinkedIn link", ["linkedin.com", "lnkd.in"]),
+    tel_number: phoneSchema("Tel number").optional().or(z.literal("").transform(() => undefined)).transform((v) => v ?? null),
   })
   .superRefine((body, ctx) => {
     rejectDuplicates(ctx, body.call_details, ["call_details"], "value", "This phone number is already in the list");

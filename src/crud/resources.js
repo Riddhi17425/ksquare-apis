@@ -95,7 +95,7 @@ export const RESOURCES = [
     label: "Event",
     search: ["name", "location"],
     orderBy: "t.from_date DESC, t.id DESC",
-    fields: [text("name", 255), text("location", 255), date("from_date", { label: "From date" }), date("to_date", { label: "To date" })],
+    fields: [text("name", 255), text("location", 255), image("img", { label: "Image", optional: true }), date("from_date", { label: "From date" }), date("to_date", { label: "To date" })],
     refine(body, ctx) {
       if (body.from_date && body.to_date && body.to_date < body.from_date)
         ctx.addIssue({ code: "custom", path: ["to_date"], message: "To date cannot be before the from date" });

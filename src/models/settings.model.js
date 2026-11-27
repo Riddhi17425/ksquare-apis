@@ -3,17 +3,18 @@ import { pool } from "../config/db.js";
 export const settingsModel = {
   async get() {
     const [[row]] = await pool.execute(
-      "SELECT facebook_link, instagram_link, linkedin_link, updated_at FROM settings WHERE id = 1",
+      "SELECT facebook_link, instagram_link, linkedin_link, tel_number, updated_at FROM settings WHERE id = 1",
     );
     const [entries] = await pool.execute("SELECT id, type, value FROM setting_entries WHERE setting_id = 1 ORDER BY sort_order, id");
     return { row, entries };
   },
 
-  async updateLinks(conn, { facebook_link, instagram_link, linkedin_link }) {
-    await conn.execute("UPDATE settings SET facebook_link = ?, instagram_link = ?, linkedin_link = ? WHERE id = 1", [
+  async updateLinks(conn, { facebook_link, instagram_link, linkedin_link, tel_number }) {
+    await conn.execute("UPDATE settings SET facebook_link = ?, instagram_link = ?, linkedin_link = ?, tel_number = ? WHERE id = 1", [
       facebook_link,
       instagram_link,
       linkedin_link,
+      tel_number,
     ]);
   },
 

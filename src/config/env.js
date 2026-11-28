@@ -19,7 +19,7 @@ const schema = z.object({
 
   // Uploaded images are stored on disk here and served from /uploads
   UPLOAD_DIR: z.string().default("uploads"),
-  API_PUBLIC_URL: z.string().url().default("http://localhost:4000"),
+  API_PUBLIC_URL: z.union([z.literal(""), z.string().url()]).default("http://localhost:4000"), // "" = relative /uploads/... URLs (the website proxies them)
 
   SESSION_TTL_MINUTES: int(480),
   SESSION_IDLE_MINUTES: int(120),
